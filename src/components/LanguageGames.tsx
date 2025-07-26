@@ -1,187 +1,160 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Globe, Users, Star, Play, Trophy, Target, RotateCcw, Home, CheckCircle } from 'lucide-react';
+import { BookOpen, Globe, Users, Star, Play, Trophy, Target, RotateCcw, Home, CheckCircle, Volume2, Heart } from 'lucide-react';
 
 interface LanguageGamesProps {
   currentLang: string;
 }
 
-// Arabic Treasure Hunt Game
-interface ArabicGameState {
-  currentWord: string;
-  userInput: string;
-  score: number;
-  level: number;
-  timeLeft: number;
-  gameOver: boolean;
-  showHint: boolean;
-}
-
-// English Bridge Builder Game
-interface EnglishGameState {
-  currentPhrase: string;
-  words: string[];
-  selectedWords: string[];
-  score: number;
-  level: number;
-  timeLeft: number;
-  gameOver: boolean;
-}
-
-// Russian Tetris Game
-interface RussianGameState {
-  fallingLetters: Array<{id: number, letter: string, x: number, y: number}>;
-  collectedWord: string;
-  targetWord: string;
-  score: number;
-  level: number;
-  timeLeft: number;
-  gameOver: boolean;
-}
-
 const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [gameActive, setGameActive] = useState(false);
-  
-  // Game states
-  const [arabicGame, setArabicGame] = useState<ArabicGameState>({
-    currentWord: 'السلام',
-    userInput: '',
-    score: 0,
-    level: 1,
-    timeLeft: 60,
-    gameOver: false,
-    showHint: false
+  const [score, setScore] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [gameOver, setGameOver] = useState(false);
+  const [lives, setLives] = useState(3);
+
+  // Arabic Memory Matching Game
+  const [arabicCards, setArabicCards] = useState<Array<{id: number, emoji: string, arabic: string, meaning: string, flipped: boolean, matched: boolean}>>([]);
+  const [flippedCards, setFlippedCards] = useState<number[]>([]);
+
+  // English Sound Match Game
+  const [englishGame, setEnglishGame] = useState({
+    currentWord: '',
+    options: [] as string[],
+    showingImage: true,
+    streak: 0
   });
 
-  const [englishGame, setEnglishGame] = useState<EnglishGameState>({
-    currentPhrase: 'Hello World',
-    words: ['Hello', 'World', 'Good', 'Morning'],
-    selectedWords: [],
-    score: 0,
-    level: 1,
-    timeLeft: 60,
-    gameOver: false
-  });
-
-  const [russianGame, setRussianGame] = useState<RussianGameState>({
-    fallingLetters: [],
-    collectedWord: '',
-    targetWord: 'Привет',
-    score: 0,
-    level: 1,
-    timeLeft: 60,
-    gameOver: false
+  // Russian Color Reaction Game
+  const [russianGame, setRussianGame] = useState({
+    currentColor: '',
+    russianName: '',
+    targetColor: '',
+    colors: [] as Array<{color: string, russian: string, name: string}>,
+    showInstruction: true,
+    reactionTime: 0,
+    startTime: 0
   });
 
   const content = {
     uz: {
       title: "Interaktiv Til O'rganish",
-      subtitle: "Har bir til uchun maxsus o'yinlar bilan o'rganing",
+      subtitle: "7 yoshdan 70 yoshgacha - hamma uchun qiziqarli o'yinlar!",
       backToMenu: "Menyuga qaytish",
       score: "Ball",
-      level: "Daraja",
+      level: "Daraja", 
       timeLeft: "Qolgan vaqt",
-      hint: "Maslahat",
+      lives: "Jonlar",
       tryAgain: "Qayta urinish",
       gameOver: "O'yin tugadi",
+      excellent: "Zo'r!",
+      good: "Yaxshi!",
+      clickToPlay: "Boshlash uchun bosing",
       languages: {
         arabic: {
           name: "Arab tili",
-          description: "Islom madaniyati va arab tilining go'zalligi",
-          game: "Arab Xazinasi Ovi",
-          gameDesc: "Arab harflarini birlashtiring va yashirin naqshlarni oching",
-          instruction: "Arab so'zini yozing",
-          hint: "Bu salom berish uchun ishlatiladi"
+          description: "Xotira o'yini - rasmlar va ma'nolarni eslang",
+          game: "Arab Xotira Dueli",
+          gameDesc: "Emoji va arab so'zlarini juftlang. Xotira va madaniyatni birlashtiring!",
+          instruction: "Kartalarni bosib juftlarni toping",
+          pairsLeft: "Qolgan juftlar"
         },
         english: {
-          name: "Ingliz tili",
-          description: "Dunyo tili - global aloqa vositasi",
-          game: "Global Ko'prik Quruvchisi",
-          gameDesc: "Ingliz so'zlari bilan mashhur iboralarni tuzing",
-          instruction: "To'g'ri so'zlarni tanlang",
-          selectWords: "So'zlarni tanlang"
+          name: "Ingliz tili", 
+          description: "Tovush va rasm o'yini - tez va aniq javob bering",
+          game: "Ingliz Tovush Safari",
+          gameDesc: "Hayvonlarning tovushini eshiting va to'g'ri rasmni tanlang!",
+          instruction: "Tovushni eshiting va rasmni tanlang",
+          streak: "Ketma-ket to'g'ri"
         },
         russian: {
           name: "Rus tili",
-          description: "Slavyan madaniyati va rus adabiyoti",
-          game: "Kirill Kristal Kaskadi",
-          gameDesc: "Kirill harflarini tartiblab so'zlar hosil qiling",
-          instruction: "Harflarni ushlang",
-          target: "Maqsad so'z"
+          description: "Rang va tezlik o'yini - reflekslaringizni sinang",
+          game: "Rus Rang Reaktsiyasi", 
+          gameDesc: "Ranglarni tez tanib, rus nomlarini bosing!",
+          instruction: "Ko'rsatilgan rangni toping",
+          reactionTime: "Reaktsiya vaqti"
         }
       }
     },
     ru: {
       title: "Интерактивное Изучение Языков",
-      subtitle: "Изучайте с помощью специальных игр для каждого языка",
-      backToMenu: "Вернуться в меню",
+      subtitle: "Увлекательные игры для всех от 7 до 70 лет!",
+      backToMenu: "Назад в меню",
       score: "Очки",
       level: "Уровень",
-      timeLeft: "Осталось времени",
-      hint: "Подсказка",
+      timeLeft: "Время",
+      lives: "Жизни", 
       tryAgain: "Попробовать снова",
       gameOver: "Игра окончена",
+      excellent: "Отлично!",
+      good: "Хорошо!",
+      clickToPlay: "Нажмите для игры",
       languages: {
         arabic: {
           name: "Арабский язык",
-          description: "Красота исламской культуры и арабского языка",
-          game: "Охота за Арабскими Сокровищами",
-          gameDesc: "Соединяйте арабские буквы и открывайте скрытые узоры",
-          instruction: "Напишите арабское слово",
-          hint: "Это используется для приветствия"
+          description: "Игра на память - запоминайте картинки и значения",
+          game: "Арабская Дуэль Памяти",
+          gameDesc: "Сопоставьте эмодзи с арабскими словами. Память + культура!",
+          instruction: "Нажимайте карты, чтобы найти пары",
+          pairsLeft: "Осталось пар"
         },
         english: {
           name: "Английский язык",
-          description: "Язык мира - средство глобального общения",
-          game: "Строитель Глобальных Мостов",
-          gameDesc: "Создавайте знаменитые фразы английскими словами",
-          instruction: "Выберите правильные слова",
-          selectWords: "Выберите слова"
+          description: "Игра звуков и картинок - отвечайте быстро и точно",
+          game: "Английское Звуковое Сафари", 
+          gameDesc: "Слушайте звуки животных и выбирайте правильную картинку!",
+          instruction: "Слушайте звук и выбирайте картинку",
+          streak: "Подряд правильно"
         },
         russian: {
           name: "Русский язык",
-          description: "Славянская культура и русская литература",
-          game: "Кириллический Кристальный Каскад",
-          gameDesc: "Расставляйте кириллические буквы, образуя слова",
-          instruction: "Ловите буквы",
-          target: "Целевое слово"
+          description: "Игра цветов и скорости - проверьте свои рефлексы",
+          game: "Русская Цветовая Реакция",
+          gameDesc: "Быстро распознавайте цвета и нажимайте русские названия!",
+          instruction: "Найдите показанный цвет",
+          reactionTime: "Время реакции"
         }
       }
     },
     en: {
       title: "Interactive Language Learning",
-      subtitle: "Learn with special games designed for each language",
+      subtitle: "Fun games for everyone from 7 to 70 years old!",
       backToMenu: "Back to Menu",
       score: "Score",
-      level: "Level",
+      level: "Level", 
       timeLeft: "Time Left",
-      hint: "Hint",
+      lives: "Lives",
       tryAgain: "Try Again",
       gameOver: "Game Over",
+      excellent: "Excellent!",
+      good: "Good!",
+      clickToPlay: "Click to Play",
       languages: {
         arabic: {
           name: "Arabic Language",
-          description: "Beauty of Islamic culture and Arabic language",
-          game: "Arabic Treasure Hunt",
-          gameDesc: "Connect Arabic letters and reveal hidden patterns",
-          instruction: "Type the Arabic word",
-          hint: "This is used for greeting"
+          description: "Memory game - remember pictures and meanings",
+          game: "Arabic Memory Duel",
+          gameDesc: "Match emojis with Arabic words. Memory meets culture!",
+          instruction: "Click cards to find pairs",
+          pairsLeft: "Pairs left"
         },
         english: {
-          name: "English Language",
-          description: "World language - global communication tool",
-          game: "Global Bridge Builder",
-          gameDesc: "Create famous phrases with English words",
-          instruction: "Select the correct words",
-          selectWords: "Select words"
+          name: "English Language", 
+          description: "Sound and picture game - answer fast and accurate",
+          game: "English Sound Safari",
+          gameDesc: "Listen to animal sounds and choose the right picture!",
+          instruction: "Listen to sound and pick the image",
+          streak: "Correct streak"
         },
         russian: {
           name: "Russian Language",
-          description: "Slavic culture and Russian literature",
-          game: "Cyrillic Crystal Cascade",
-          gameDesc: "Arrange Cyrillic letters to form words",
-          instruction: "Catch the letters",
-          target: "Target word"
+          description: "Color and speed game - test your reflexes",
+          game: "Russian Color Reaction",
+          gameDesc: "Quickly recognize colors and tap Russian names!",
+          instruction: "Find the shown color",
+          reactionTime: "Reaction time"
         }
       }
     }
@@ -192,7 +165,7 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
   const languageCards = [
     {
       id: 'arabic',
-      icon: '🕌',
+      icon: '🧠',
       color: 'from-amber-500 to-orange-600',
       bgColor: 'bg-gradient-to-br from-amber-50 to-orange-100',
       borderColor: 'border-amber-200',
@@ -200,142 +173,145 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
     },
     {
       id: 'english',
-      icon: '🌍',
-      color: 'from-blue-500 to-indigo-600',
+      icon: '🎵',
+      color: 'from-blue-500 to-indigo-600', 
       bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-100',
       borderColor: 'border-blue-200',
       textColor: 'text-blue-800'
     },
     {
       id: 'russian',
-      icon: '❄️',
+      icon: '⚡',
       color: 'from-purple-500 to-pink-600',
-      bgColor: 'bg-gradient-to-br from-purple-50 to-pink-100',
+      bgColor: 'bg-gradient-to-br from-purple-50 to-pink-100', 
       borderColor: 'border-purple-200',
       textColor: 'text-purple-800'
     }
   ];
 
-  // Arabic Game Logic
+  // Game Data
   const arabicWords = [
-    { word: 'السلام', meaning: 'Peace/Greeting', hint: currentContent.languages.arabic.hint },
-    { word: 'شكرا', meaning: 'Thank you', hint: 'Used to express gratitude' },
-    { word: 'مرحبا', meaning: 'Welcome', hint: 'Said when greeting someone' },
-    { word: 'الحمد', meaning: 'Praise', hint: 'Used in prayer' }
+    { emoji: '☮️', arabic: 'سلام', meaning: 'Peace' },
+    { emoji: '🙏', arabic: 'شكرا', meaning: 'Thanks' },
+    { emoji: '👋', arabic: 'مرحبا', meaning: 'Hello' },
+    { emoji: '❤️', arabic: 'حب', meaning: 'Love' },
+    { emoji: '🏠', arabic: 'بيت', meaning: 'House' },
+    { emoji: '💧', arabic: 'ماء', meaning: 'Water' },
+    { emoji: '☀️', arabic: 'شمس', meaning: 'Sun' },
+    { emoji: '🌙', arabic: 'قمر', meaning: 'Moon' }
   ];
 
-  // English Game Logic
-  const englishPhrases = [
-    { phrase: 'Hello World', words: ['Hello', 'World', 'Good', 'Morning'] },
-    { phrase: 'Thank You', words: ['Thank', 'You', 'Please', 'Welcome'] },
-    { phrase: 'Good Morning', words: ['Good', 'Morning', 'Night', 'Afternoon'] },
-    { phrase: 'How Are You', words: ['How', 'Are', 'You', 'Fine'] }
+  const animalSounds = [
+    { animal: 'cat', emoji: '🐱', sound: 'meow' },
+    { animal: 'dog', emoji: '🐶', sound: 'woof' },
+    { animal: 'cow', emoji: '🐄', sound: 'moo' },
+    { animal: 'duck', emoji: '🦆', sound: 'quack' },
+    { animal: 'lion', emoji: '🦁', sound: 'roar' },
+    { animal: 'bird', emoji: '🐦', sound: 'tweet' },
+    { animal: 'pig', emoji: '🐷', sound: 'oink' },
+    { animal: 'horse', emoji: '🐎', sound: 'neigh' }
   ];
 
-  // Russian Game Logic
-  const russianWords = ['Привет', 'Спасибо', 'Пожалуйста', 'Добро'];
+  const colors = [
+    { color: '#FF0000', russian: 'красный', name: 'Red' },
+    { color: '#0000FF', russian: 'синий', name: 'Blue' },
+    { color: '#00FF00', russian: 'зелёный', name: 'Green' },
+    { color: '#FFFF00', russian: 'жёлтый', name: 'Yellow' },
+    { color: '#FF69B4', russian: 'розовый', name: 'Pink' },
+    { color: '#800080', russian: 'фиолетовый', name: 'Purple' },
+    { color: '#FFA500', russian: 'оранжевый', name: 'Orange' },
+    { color: '#000000', russian: 'чёрный', name: 'Black' }
+  ];
 
-  // Game timers
+  // Timer effect
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (gameActive && selectedLanguage) {
-      timer = setInterval(() => {
-        if (selectedLanguage === 'arabic') {
-          setArabicGame(prev => {
-            if (prev.timeLeft <= 1) {
-              return { ...prev, timeLeft: 0, gameOver: true };
-            }
-            return { ...prev, timeLeft: prev.timeLeft - 1 };
-          });
-        } else if (selectedLanguage === 'english') {
-          setEnglishGame(prev => {
-            if (prev.timeLeft <= 1) {
-              return { ...prev, timeLeft: 0, gameOver: true };
-            }
-            return { ...prev, timeLeft: prev.timeLeft - 1 };
-          });
-        } else if (selectedLanguage === 'russian') {
-          setRussianGame(prev => {
-            if (prev.timeLeft <= 1) {
-              return { ...prev, timeLeft: 0, gameOver: true };
-            }
-            return { ...prev, timeLeft: prev.timeLeft - 1 };
-          });
-        }
-      }, 1000);
+    if (gameActive && timeLeft > 0 && !gameOver) {
+      timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+    } else if (timeLeft === 0) {
+      setGameOver(true);
     }
-    return () => clearInterval(timer);
-  }, [gameActive, selectedLanguage]);
+    return () => clearTimeout(timer);
+  }, [gameActive, timeLeft, gameOver]);
 
-  // Russian game falling letters
-  useEffect(() => {
-    let letterTimer: NodeJS.Timeout;
-    if (gameActive && selectedLanguage === 'russian') {
-      letterTimer = setInterval(() => {
-        setRussianGame(prev => {
-          const targetLetters = prev.targetWord.split('');
-          const randomLetter = targetLetters[Math.floor(Math.random() * targetLetters.length)];
-          const newLetter = {
-            id: Date.now(),
-            letter: randomLetter,
-            x: Math.random() * 300,
-            y: 0
-          };
-          
-          // Move existing letters down and add new one
-          const updatedLetters = prev.fallingLetters
-            .map(letter => ({ ...letter, y: letter.y + 20 }))
-            .filter(letter => letter.y < 400);
-          
-          return {
-            ...prev,
-            fallingLetters: [...updatedLetters, newLetter]
-          };
-        });
-      }, 1500);
-    }
-    return () => clearInterval(letterTimer);
-  }, [gameActive, selectedLanguage]);
+  // Initialize Arabic Memory Game
+  const initArabicGame = () => {
+    const gameWords = arabicWords.slice(0, 6); // 6 pairs = 12 cards
+    const cards = [];
+    let id = 0;
+    
+    gameWords.forEach(word => {
+      // Add emoji card
+      cards.push({
+        id: id++,
+        emoji: word.emoji,
+        arabic: word.arabic,
+        meaning: word.meaning,
+        flipped: false,
+        matched: false
+      });
+      // Add arabic card
+      cards.push({
+        id: id++,
+        emoji: word.emoji,
+        arabic: word.arabic,
+        meaning: word.meaning,
+        flipped: false,
+        matched: false
+      });
+    });
+    
+    // Shuffle cards
+    setArabicCards(cards.sort(() => Math.random() - 0.5));
+    setFlippedCards([]);
+  };
+
+  // Initialize English Sound Game
+  const initEnglishGame = () => {
+    const randomAnimal = animalSounds[Math.floor(Math.random() * animalSounds.length)];
+    const wrongOptions = animalSounds
+      .filter(a => a.animal !== randomAnimal.animal)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    
+    const allOptions = [randomAnimal, ...wrongOptions].sort(() => Math.random() - 0.5);
+    
+    setEnglishGame({
+      currentWord: randomAnimal.animal,
+      options: allOptions.map(a => a.emoji),
+      showingImage: false,
+      streak: 0
+    });
+  };
+
+  // Initialize Russian Color Game
+  const initRussianGame = () => {
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const shuffledColors = [...colors].sort(() => Math.random() - 0.5);
+    
+    setRussianGame({
+      currentColor: randomColor.color,
+      russianName: randomColor.russian,
+      targetColor: randomColor.name,
+      colors: shuffledColors,
+      showInstruction: true,
+      reactionTime: 0,
+      startTime: Date.now()
+    });
+  };
 
   const startGame = (languageId: string) => {
     setSelectedLanguage(languageId);
     setGameActive(true);
+    setGameOver(false);
+    setScore(0);
+    setLevel(1);
+    setTimeLeft(60);
+    setLives(3);
     
-    // Reset game states
-    if (languageId === 'arabic') {
-      const randomWord = arabicWords[Math.floor(Math.random() * arabicWords.length)];
-      setArabicGame({
-        currentWord: randomWord.word,
-        userInput: '',
-        score: 0,
-        level: 1,
-        timeLeft: 60,
-        gameOver: false,
-        showHint: false
-      });
-    } else if (languageId === 'english') {
-      const randomPhrase = englishPhrases[Math.floor(Math.random() * englishPhrases.length)];
-      setEnglishGame({
-        currentPhrase: randomPhrase.phrase,
-        words: randomPhrase.words,
-        selectedWords: [],
-        score: 0,
-        level: 1,
-        timeLeft: 60,
-        gameOver: false
-      });
-    } else if (languageId === 'russian') {
-      const randomWord = russianWords[Math.floor(Math.random() * russianWords.length)];
-      setRussianGame({
-        fallingLetters: [],
-        collectedWord: '',
-        targetWord: randomWord,
-        score: 0,
-        level: 1,
-        timeLeft: 60,
-        gameOver: false
-      });
-    }
+    if (languageId === 'arabic') initArabicGame();
+    else if (languageId === 'english') initEnglishGame();
+    else if (languageId === 'russian') initRussianGame();
   };
 
   const endGame = () => {
@@ -344,77 +320,73 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
   };
 
   const restartGame = () => {
-    if (selectedLanguage) {
-      startGame(selectedLanguage);
-    }
+    if (selectedLanguage) startGame(selectedLanguage);
   };
 
   // Arabic game handlers
-  const handleArabicInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setArabicGame(prev => ({ ...prev, userInput: value }));
+  const flipCard = (cardId: number) => {
+    if (flippedCards.length === 2) return;
     
-    if (value === arabicGame.currentWord) {
-      setArabicGame(prev => ({
-        ...prev,
-        score: prev.score + 100,
-        level: prev.level + 1,
-        userInput: ''
-      }));
+    const newFlipped = [...flippedCards, cardId];
+    setFlippedCards(newFlipped);
+    
+    setArabicCards(prev => prev.map(card => 
+      card.id === cardId ? { ...card, flipped: true } : card
+    ));
+
+    if (newFlipped.length === 2) {
+      const [first, second] = newFlipped;
+      const firstCard = arabicCards.find(c => c.id === first);
+      const secondCard = arabicCards.find(c => c.id === second);
       
-      // Next word
-      setTimeout(() => {
-        const randomWord = arabicWords[Math.floor(Math.random() * arabicWords.length)];
-        setArabicGame(prev => ({ ...prev, currentWord: randomWord.word }));
-      }, 1000);
+      if (firstCard && secondCard && firstCard.arabic === secondCard.arabic) {
+        // Match found!
+        setTimeout(() => {
+          setArabicCards(prev => prev.map(card => 
+            card.arabic === firstCard.arabic ? { ...card, matched: true } : card
+          ));
+          setScore(prev => prev + 100);
+          setFlippedCards([]);
+        }, 1000);
+      } else {
+        // No match
+        setTimeout(() => {
+          setArabicCards(prev => prev.map(card => 
+            newFlipped.includes(card.id) ? { ...card, flipped: false } : card
+          ));
+          setFlippedCards([]);
+        }, 1500);
+      }
     }
   };
 
   // English game handlers
-  const selectEnglishWord = (word: string) => {
-    setEnglishGame(prev => {
-      const newSelected = [...prev.selectedWords, word];
-      const targetWords = prev.currentPhrase.split(' ');
-      
-      if (newSelected.join(' ') === prev.currentPhrase) {
-        // Correct phrase completed
-        return {
-          ...prev,
-          selectedWords: [],
-          score: prev.score + 150,
-          level: prev.level + 1
-        };
-      }
-      
-      return { ...prev, selectedWords: newSelected };
-    });
+  const selectAnimal = (emoji: string) => {
+    const correctAnimal = animalSounds.find(a => a.animal === englishGame.currentWord);
+    if (correctAnimal && emoji === correctAnimal.emoji) {
+      setScore(prev => prev + 150);
+      setEnglishGame(prev => ({ ...prev, streak: prev.streak + 1 }));
+      setTimeout(initEnglishGame, 1000);
+    } else {
+      setLives(prev => prev - 1);
+      if (lives <= 1) setGameOver(true);
+      setTimeout(initEnglishGame, 1000);
+    }
   };
 
   // Russian game handlers
-  const catchRussianLetter = (letterId: number, letter: string) => {
-    setRussianGame(prev => {
-      const newCollectedWord = prev.collectedWord + letter;
-      const updatedLetters = prev.fallingLetters.filter(l => l.id !== letterId);
-      
-      if (newCollectedWord === prev.targetWord) {
-        // Word completed
-        const newTargetWord = russianWords[Math.floor(Math.random() * russianWords.length)];
-        return {
-          ...prev,
-          fallingLetters: updatedLetters,
-          collectedWord: '',
-          targetWord: newTargetWord,
-          score: prev.score + 200,
-          level: prev.level + 1
-        };
-      }
-      
-      return {
-        ...prev,
-        fallingLetters: updatedLetters,
-        collectedWord: newCollectedWord
-      };
-    });
+  const selectColor = (colorName: string) => {
+    const reactionTime = Date.now() - russianGame.startTime;
+    if (colorName === russianGame.russianName) {
+      const timeBonus = Math.max(0, 200 - Math.floor(reactionTime / 10));
+      setScore(prev => prev + 100 + timeBonus);
+      setRussianGame(prev => ({ ...prev, reactionTime }));
+      setTimeout(initRussianGame, 1000);
+    } else {
+      setLives(prev => prev - 1);
+      if (lives <= 1) setGameOver(true);
+      setTimeout(initRussianGame, 1000);
+    }
   };
 
   // Render game content
@@ -426,7 +398,7 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className={`${gameCard.bgColor} rounded-2xl p-8 max-w-2xl w-full max-h-screen overflow-y-auto`}>
+        <div className={`${gameCard.bgColor} rounded-2xl p-6 max-w-4xl w-full max-h-screen overflow-y-auto`}>
           {/* Game Header */}
           <div className="flex justify-between items-center mb-6">
             <button 
@@ -437,181 +409,152 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
               <span>{currentContent.backToMenu}</span>
             </button>
             
-            <div className="flex space-x-4 text-sm">
+            <div className="flex space-x-6 text-sm">
               <div className="flex items-center space-x-1">
-                <Trophy className="w-4 h-4" />
-                <span>{currentContent.score}: {
-                  selectedLanguage === 'arabic' ? arabicGame.score :
-                  selectedLanguage === 'english' ? englishGame.score :
-                  russianGame.score
-                }</span>
+                <Trophy className="w-4 h-4 text-yellow-500" />
+                <span>{currentContent.score}: {score}</span>
               </div>
               <div className="flex items-center space-x-1">
-                <Target className="w-4 h-4" />
-                <span>{currentContent.level}: {
-                  selectedLanguage === 'arabic' ? arabicGame.level :
-                  selectedLanguage === 'english' ? englishGame.level :
-                  russianGame.level
-                }</span>
+                <Target className="w-4 h-4 text-blue-500" />
+                <span>{currentContent.level}: {level}</span>
               </div>
               <div className="flex items-center space-x-1">
-                <span>⏰ {currentContent.timeLeft}: {
-                  selectedLanguage === 'arabic' ? arabicGame.timeLeft :
-                  selectedLanguage === 'english' ? englishGame.timeLeft :
-                  russianGame.timeLeft
-                }</span>
+                <span>⏰ {timeLeft}s</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Heart className="w-4 h-4 text-red-500" />
+                <span>{lives}</span>
               </div>
             </div>
           </div>
 
-          {/* Arabic Game */}
-          {selectedLanguage === 'arabic' && (
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-amber-800 mb-4">
-                {currentContent.languages.arabic.game}
-              </h3>
-              
-              {arabicGame.gameOver ? (
-                <div className="space-y-4">
-                  <h4 className="text-xl text-red-600">{currentContent.gameOver}</h4>
-                  <p>Final Score: {arabicGame.score}</p>
-                  <button 
-                    onClick={restartGame}
-                    className="bg-amber-500 text-white px-6 py-2 rounded-lg hover:bg-amber-600 transition-colors"
-                  >
-                    {currentContent.tryAgain}
-                  </button>
-                </div>
-              ) : (
+          {/* Game Title */}
+          <h3 className={`text-3xl font-bold ${gameCard.textColor} mb-6 text-center`}>
+            {currentContent.languages[selectedLanguage as keyof typeof currentContent.languages].game}
+          </h3>
+
+          {gameOver ? (
+            <div className="text-center space-y-6">
+              <div className="text-6xl">🎯</div>
+              <h4 className="text-2xl font-bold text-gray-800">{currentContent.gameOver}</h4>
+              <p className="text-xl">Final Score: {score}</p>
+              <button 
+                onClick={restartGame}
+                className={`bg-gradient-to-r ${gameCard.color} text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all transform hover:scale-105`}
+              >
+                {currentContent.tryAgain}
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Arabic Memory Game */}
+              {selectedLanguage === 'arabic' && (
                 <div className="space-y-6">
-                  <div className="bg-white rounded-lg p-6 shadow-lg">
-                    <p className="text-6xl mb-4 font-arabic" dir="rtl">{arabicGame.currentWord}</p>
-                    <p className="text-sm text-gray-600 mb-4">{currentContent.languages.arabic.instruction}</p>
-                    <input
-                      type="text"
-                      value={arabicGame.userInput}
-                      onChange={handleArabicInput}
-                      className="w-full p-3 border rounded-lg text-center text-xl"
-                      placeholder="اكتب هنا..."
-                      dir="rtl"
-                    />
+                  <p className="text-center text-gray-700 mb-4">
+                    {currentContent.languages.arabic.instruction}
+                  </p>
+                  
+                  <div className="grid grid-cols-4 gap-4">
+                    {arabicCards.map(card => (
+                      <div
+                        key={card.id}
+                        onClick={() => !card.flipped && !card.matched && flipCard(card.id)}
+                        className={`aspect-square rounded-lg border-2 cursor-pointer transition-all duration-300 flex items-center justify-center text-4xl font-bold ${
+                          card.matched 
+                            ? 'bg-green-200 border-green-400' 
+                            : card.flipped 
+                              ? 'bg-white border-amber-400' 
+                              : 'bg-amber-100 border-amber-300 hover:bg-amber-200'
+                        }`}
+                      >
+                        {card.matched || card.flipped ? (
+                          <div className="text-center">
+                            <div className="text-3xl mb-1">
+                              {card.id % 2 === 0 ? card.emoji : card.arabic}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {card.meaning}
+                            </div>
+                          </div>
+                        ) : (
+                          '🎴'
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  
-                  <button
-                    onClick={() => setArabicGame(prev => ({ ...prev, showHint: !prev.showHint }))}
-                    className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors"
-                  >
-                    {currentContent.hint}
-                  </button>
-                  
-                  {arabicGame.showHint && (
-                    <div className="bg-yellow-100 p-3 rounded-lg">
-                      <p className="text-yellow-800">{currentContent.languages.arabic.hint}</p>
-                    </div>
-                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* English Game */}
-          {selectedLanguage === 'english' && (
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-blue-800 mb-4">
-                {currentContent.languages.english.game}
-              </h3>
-              
-              {englishGame.gameOver ? (
-                <div className="space-y-4">
-                  <h4 className="text-xl text-red-600">{currentContent.gameOver}</h4>
-                  <p>Final Score: {englishGame.score}</p>
-                  <button 
-                    onClick={restartGame}
-                    className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    {currentContent.tryAgain}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-lg p-6 shadow-lg">
-                    <h4 className="text-xl mb-4">Target: "{englishGame.currentPhrase}"</h4>
-                    <p className="text-sm text-gray-600 mb-4">{currentContent.languages.english.instruction}</p>
-                    
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600 mb-2">{currentContent.languages.english.selectWords}:</p>
-                      <p className="text-lg font-semibold">
-                        {englishGame.selectedWords.join(' ') || '...'}
-                      </p>
+              {/* English Sound Game */}
+              {selectedLanguage === 'english' && (
+                <div className="space-y-6 text-center">
+                  <div className="bg-white rounded-xl p-8 shadow-lg">
+                    <div className="text-6xl mb-4">🔊</div>
+                    <p className="text-lg text-gray-700 mb-4">
+                      {currentContent.languages.english.instruction}
+                    </p>
+                    <div className="text-4xl mb-6 p-4 bg-blue-100 rounded-lg">
+                      Animal Sound: "{animalSounds.find(a => a.animal === englishGame.currentWord)?.sound}"
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2">
-                      {englishGame.words.map((word, index) => (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {englishGame.options.map((emoji, index) => (
                         <button
                           key={index}
-                          onClick={() => selectEnglishWord(word)}
-                          className="bg-blue-100 hover:bg-blue-200 text-blue-800 py-2 px-4 rounded-lg transition-colors"
+                          onClick={() => selectAnimal(emoji)}
+                          className="text-6xl p-6 bg-blue-50 hover:bg-blue-100 rounded-xl border-2 border-blue-200 hover:border-blue-400 transition-all transform hover:scale-105"
                         >
-                          {word}
+                          {emoji}
                         </button>
                       ))}
+                    </div>
+                    
+                    <div className="mt-4 text-sm text-gray-600">
+                      {currentContent.languages.english.streak}: {englishGame.streak}
                     </div>
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Russian Game */}
-          {selectedLanguage === 'russian' && (
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-purple-800 mb-4">
-                {currentContent.languages.russian.game}
-              </h3>
-              
-              {russianGame.gameOver ? (
-                <div className="space-y-4">
-                  <h4 className="text-xl text-red-600">{currentContent.gameOver}</h4>
-                  <p>Final Score: {russianGame.score}</p>
-                  <button 
-                    onClick={restartGame}
-                    className="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600 transition-colors"
-                  >
-                    {currentContent.tryAgain}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-lg p-6 shadow-lg">
-                    <h4 className="text-xl mb-2">{currentContent.languages.russian.target}: {russianGame.targetWord}</h4>
-                    <p className="text-sm text-gray-600 mb-4">{currentContent.languages.russian.instruction}</p>
+              {/* Russian Color Game */}
+              {selectedLanguage === 'russian' && (
+                <div className="space-y-6 text-center">
+                  <div className="bg-white rounded-xl p-8 shadow-lg">
+                    <p className="text-lg text-gray-700 mb-6">
+                      {currentContent.languages.russian.instruction}
+                    </p>
                     
-                    <div className="mb-4">
-                      <p className="text-lg font-semibold">
-                        Collected: {russianGame.collectedWord || '...'}
-                      </p>
-                    </div>
+                    <div 
+                      className="w-32 h-32 mx-auto rounded-full mb-6 border-4 border-gray-300 shadow-lg"
+                      style={{ backgroundColor: russianGame.currentColor }}
+                    ></div>
                     
-                    {/* Game Area */}
-                    <div className="relative bg-gradient-to-b from-blue-100 to-purple-100 rounded-lg h-64 overflow-hidden">
-                      {russianGame.fallingLetters.map(letter => (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {russianGame.colors.map((color, index) => (
                         <button
-                          key={letter.id}
-                          onClick={() => catchRussianLetter(letter.id, letter.letter)}
-                          className="absolute bg-white hover:bg-gray-100 text-purple-800 font-bold w-8 h-8 rounded-full shadow-lg transition-all transform hover:scale-110"
-                          style={{
-                            left: `${letter.x}px`,
-                            top: `${letter.y}px`
-                          }}
+                          key={index}
+                          onClick={() => selectColor(color.russian)}
+                          className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border-2 border-purple-200 hover:border-purple-400 transition-all transform hover:scale-105"
                         >
-                          {letter.letter}
+                          <div className="text-lg font-bold text-purple-800">
+                            {color.russian}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            ({color.name})
+                          </div>
                         </button>
                       ))}
                     </div>
+                    
+                    {russianGame.reactionTime > 0 && (
+                      <div className="mt-4 text-sm text-gray-600">
+                        {currentContent.languages.russian.reactionTime}: {russianGame.reactionTime}ms
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -642,15 +585,15 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
                 className={`group relative overflow-hidden rounded-2xl border-2 ${card.borderColor} ${card.bgColor} p-8 cursor-pointer transform transition-all duration-500 hover:scale-105 hover:shadow-2xl`}
                 onClick={() => startGame(card.id)}
               >
-                {/* Background Pattern */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="w-full h-full bg-gradient-to-br from-transparent via-white to-transparent"></div>
+                {/* Animated Background */}
+                <div className="absolute inset-0 opacity-20">
+                  <div className="w-full h-full bg-gradient-to-br from-transparent via-white to-transparent animate-pulse"></div>
                 </div>
 
                 {/* Card Content */}
                 <div className="relative z-10">
-                  {/* Icon */}
-                  <div className="text-6xl mb-6 text-center transform group-hover:scale-110 transition-transform duration-300">
+                  {/* Icon with Bounce Animation */}
+                  <div className="text-6xl mb-6 text-center transform group-hover:scale-110 group-hover:animate-bounce transition-transform duration-300">
                     {card.icon}
                   </div>
 
@@ -665,19 +608,19 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
                   </p>
 
                   {/* Game Info */}
-                  <div className="bg-white/50 rounded-lg p-4 mb-6">
-                    <h4 className={`font-semibold ${card.textColor} mb-2 flex items-center`}>
+                  <div className="bg-white/60 rounded-lg p-4 mb-6 backdrop-blur-sm">
+                    <h4 className={`font-semibold ${card.textColor} mb-2 flex items-center justify-center`}>
                       <Trophy className="w-4 h-4 mr-2" />
                       {langData.game}
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 text-center">
                       {langData.gameDesc}
                     </p>
                   </div>
 
                   {/* Play Button */}
                   <button
-                    className={`w-full py-3 px-6 bg-gradient-to-r ${card.color} text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2`}
+                    className={`w-full py-4 px-6 bg-gradient-to-r ${card.color} text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2 group-hover:animate-pulse`}
                   >
                     <Play className="w-5 h-5" />
                     <span>
@@ -686,25 +629,16 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
                     </span>
                   </button>
 
-                  {/* Stats */}
-                  <div className="mt-6 flex justify-between text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Users className="w-4 h-4 mr-1" />
-                      <span>150+</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 mr-1 text-yellow-500" />
-                      <span>4.9</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Target className="w-4 h-4 mr-1" />
-                      <span>95%</span>
-                    </div>
+                  {/* Age Range */}
+                  <div className="mt-4 text-center">
+                    <span className="text-xs bg-white/50 px-3 py-1 rounded-full">
+                      👶 7-70 📱 {currentContent.clickToPlay}
+                    </span>
                   </div>
                 </div>
 
                 {/* Hover Effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               </div>
             );
           })}
@@ -731,35 +665,4 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
               <Globe className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              {currentLang === 'uz' ? 'Global Sertifikatlar' : 
-               currentLang === 'ru' ? 'Глобальные Сертификаты' : 'Global Certificates'}
-            </h3>
-            <p className="text-gray-600">
-              {currentLang === 'uz' ? 'Xalqaro tan olingan sertifikatlar olish imkoniyati' : 
-               currentLang === 'ru' ? 'Возможность получения международно признанных сертификатов' : 'Opportunity to earn internationally recognized certificates'}
-            </p>
-          </div>
-
-          <div className="text-center p-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              {currentLang === 'uz' ? 'Tajribali O\'qituvchilar' : 
-               currentLang === 'ru' ? 'Опытные Преподаватели' : 'Experienced Teachers'}
-            </h3>
-            <p className="text-gray-600">
-              {currentLang === 'uz' ? 'Malakali va tajribali o\'qituvchilar jamoasi' : 
-               currentLang === 'ru' ? 'Команда квалифицированных и опытных преподавателей' : 'Team of qualified and experienced teachers'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Render Game Modal */}
-      {renderGameContent()}
-    </section>
-  );
-};
-
-export default LanguageGames;
+              {currentLang === 'uz' ? 'Global Sertifikatlar'
