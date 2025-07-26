@@ -665,4 +665,35 @@ const LanguageGames: React.FC<LanguageGamesProps> = ({ currentLang }) => {
               <Globe className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              {currentLang === 'uz' ? 'Global Sertifikatlar'
+              {currentLang === 'uz' ? 'Global Sertifikatlar' : 
+               currentLang === 'ru' ? 'Глобальные Сертификаты' : 'Global Certificates'}
+            </h3>
+            <p className="text-gray-600">
+              {currentLang === 'uz' ? 'Xalqaro tan olingan sertifikatlar olish imkoniyati' : 
+               currentLang === 'ru' ? 'Возможность получения международно признанных сертификатов' : 'Opportunity to earn internationally recognized certificates'}
+            </p>
+          </div>
+
+          <div className="text-center p-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              {currentLang === 'uz' ? 'Tajribali O\'qituvchilar' : 
+               currentLang === 'ru' ? 'Опытные Преподаватели' : 'Experienced Teachers'}
+            </h3>
+            <p className="text-gray-600">
+              {currentLang === 'uz' ? 'Malakali va tajribali o\'qituvchilar jamoasi' : 
+               currentLang === 'ru' ? 'Команда квалифицированных и опытных преподавателей' : 'Team of qualified and experienced teachers'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Render Game Modal */}
+      {renderGameContent()}
+    </section>
+  );
+};
+
+export default LanguageGames;
